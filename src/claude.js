@@ -2,7 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import { readFile } from "node:fs/promises";
 import { cfg, log } from "./config.js";
 
-const client = new Anthropic({ apiKey: cfg.anthropicKey });
+// Constructed on first use, not at import time, so that steps which never call
+// the model (ingest) do not require ANTHROPIC_API_KEY to be set.
+let _client = null;
+const client = () => (_client ||= new Anthropic({ apiKey: cfg.anthropicKey }));
 
 
 let SYSTEM = null;
@@ -41,7 +44,7 @@ export async function selectAndWrite(candidates, when = new Date()) {
 
   const dateISO = new Intl.DateTimeFormat("en-CA", { timeZone: cfg.tz }).format(when);
 
-  const res = await client.messages.create({
+  const res = await client().messages.create({
     model: cfg.model,
     max_tokens: 4000,
     temperature: 0.4,

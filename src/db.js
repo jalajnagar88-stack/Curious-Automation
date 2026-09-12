@@ -1,8 +1,22 @@
 import { createClient } from "@supabase/supabase-js";
 import { cfg } from "./config.js";
 
-export const db = createClient(cfg.supabaseUrl, cfg.supabaseKey, {
-  auth: { persistSession: false },
+/*
+ * The client is built on first property access, not at import time, so that a
+ * step which never reaches Supabase can still import this module. Call sites
+ * keep using `db.from(...)` unchanged.
+ */
+let _client = null;
+const client = () =>
+  (_client ||= createClient(cfg.supabaseUrl, cfg.supabaseKey, {
+    auth: { persistSession: false },
+  }));
+
+export const db = new Proxy({}, {
+  get: (_t, prop) => {
+    const v = client()[prop];
+    return typeof v === "function" ? v.bind(client()) : v;
+  },
 });
 
 /** Insert candidates, ignoring any URL already stored. Returns the new rows. */
