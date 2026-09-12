@@ -16,8 +16,32 @@ const req = (k) => {
 };
 
 export const cfg = {
+  /*
+   * Which transport src/llm.js uses. The prompt, the schema and the fact gate
+   * are identical on all three; only the HTTP call differs.
+   *
+   * These are getters rather than fields so that a value read from the
+   * environment is picked up whenever it is asked for, not frozen at import.
+   * The base URLs are overridable so a test can point a provider at a local
+   * server, and so a proxy or a regional endpoint needs no code change.
+   */
+  get provider() { return process.env.LLM_PROVIDER || "anthropic"; },
+  get llmMaxTokens() { return Number(process.env.LLM_MAX_TOKENS || 4000); },
+  get llmTemperature() { return Number(process.env.LLM_TEMPERATURE || 0.4); },
+
   get anthropicKey() { return req("ANTHROPIC_API_KEY"); },
-  model: process.env.CLAUDE_MODEL || "claude-sonnet-4-6",
+  get model() { return process.env.CLAUDE_MODEL || "claude-sonnet-5"; },
+
+  get geminiKey() { return req("GEMINI_API_KEY"); },
+  get geminiModel() { return process.env.GEMINI_MODEL || "gemini-2.0-flash"; },
+  get geminiBase() {
+    return process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta";
+  },
+
+  // Any OpenAI-compatible endpoint: Groq, OpenRouter, Cerebras, Together, Ollama.
+  get openaiKey() { return req("OPENAI_API_KEY"); },
+  get openaiBase() { return process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"; },
+  get openaiModel() { return process.env.OPENAI_MODEL || "gpt-4o-mini"; },
 
   // One SQLite file. Relative paths resolve against the working directory, so
   // set an absolute path in .env when running under pm2 or a container.

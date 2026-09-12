@@ -1,7 +1,7 @@
 import { cfg, log } from "./config.js";
 import * as db from "./db.js";
 import { ingest } from "./ingest.js";
-import { selectAndWrite } from "./claude.js";
+import { selectAndWrite } from "./model.js";
 import { verify } from "./verify.js";
 import { renderSlides } from "./render.js";
 import * as tg from "./telegram.js";

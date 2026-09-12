@@ -21,7 +21,8 @@ template/preview.html          open this to iterate on the design, no pipeline n
 sql/001_init.sqlite.sql        the single table, created on first run
 src/db.js                      the SQLite data layer
 src/ingest.js                  feeds, dedupe, article body extraction
-src/claude.js                  the one model call
+src/model.js                   the prompt, and parsing what comes back
+src/llm.js                     the model call — anthropic, gemini or any OpenAI-compatible
 src/verify.js                  the fact gate — read this one carefully
 src/render.js                  htmlcsstoimage, with a local Puppeteer fallback
 src/telegram.js                approval card and long-poll listener

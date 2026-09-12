@@ -12,6 +12,7 @@
     "ingest": "node --disable-warning=ExperimentalWarning src/index.js --once=ingest",
     "ingest:selftest": "node --disable-warning=ExperimentalWarning scripts/ingest-selftest.js",
     "check:db": "node --disable-warning=ExperimentalWarning scripts/check-db.js",
+    "check:llm": "node --disable-warning=ExperimentalWarning scripts/check-llm.js",
     "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
     "draft": "node --disable-warning=ExperimentalWarning src/index.js --once=draft",
     "publish": "node --disable-warning=ExperimentalWarning src/index.js --once=publish",
