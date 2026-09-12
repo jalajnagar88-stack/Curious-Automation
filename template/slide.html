@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* --- swap these three for the real Curious brand values --- */
+    --red:      #D11A1A;
+    --paper:    #FCFBF7;
+    --ink:      #000000;
+    /* ---------------------------------------------------------- */
+    --paper-dim: #E8E4DA;
+    --w: 1080px;
+    --h: 1350px;
+    --pad: 84px;
+    --serif: "Instrument Serif", Georgia, serif;
+    --grot:  "Archivo", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ width:var(--w); height:var(--h); }
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--grot);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:geometricPrecision;
+  }
+
+  .slide{
+    width:var(--w); height:var(--h);
+    padding:var(--pad);
+    display:flex; flex-direction:column;
+    position:relative; overflow:hidden;
+  }
+
+  /* ---------- persistent furniture ---------- */
+  .top{
+    display:flex; align-items:baseline; justify-content:space-between;
+    flex:0 0 auto; padding-bottom:10px;
+  }
+  .day{ font-family:var(--serif); font-style:italic; font-size:32px; letter-spacing:.01em; }
+  .pos{ font-family:var(--grot); font-weight:500; font-size:24px; letter-spacing:.04em; }
+
+  .stage{ flex:1 1 auto; display:flex; flex-direction:column; min-height:0; }
+
+  .foot{
+    flex:0 0 auto; border-top:2px solid var(--ink);
+    padding-top:22px; margin-top:34px;
+    display:flex; align-items:baseline; justify-content:space-between;
+    font-size:23px; font-weight:500; letter-spacing:.01em;
+  }
+  .mark{ font-family:var(--serif); font-style:normal; font-size:30px; letter-spacing:.005em; }
+  .src{ opacity:.55; }
+
+  /* ---------- 1 · hook ---------- */
+  .hook .stage{ justify-content:flex-end; }
+  .hook .headline{
+    font-family:var(--serif); font-size:132px; line-height:.94;
+    letter-spacing:-.015em; max-width:15ch;
+  }
+  .hook .standfirst{
+    font-size:34px; line-height:1.42; margin-top:40px;
+    max-width:26ch; opacity:.72; font-weight:400;
+  }
+  .hook .rule{ width:180px; height:12px; background:var(--red); margin-bottom:52px; }
+
+  /* ---------- 2 · context ---------- */
+  .context .stage{ justify-content:center; gap:34px; }
+  .context .headline{
+    font-family:var(--serif); font-size:76px; line-height:1.02;
+    letter-spacing:-.01em; max-width:17ch; margin-bottom:10px;
+  }
+  .context p{
+    font-size:35px; line-height:1.48; max-width:30ch;
+    padding-left:30px; border-left:5px solid var(--paper-dim);
+  }
+  .context p:first-of-type{ border-left-color:var(--red); }
+
+  /* ---------- 3 · number ---------- */
+  .number .stage{ justify-content:center; }
+  .number .fig{
+    font-family:var(--serif); font-size:330px; line-height:.82;
+    letter-spacing:-.04em; color:var(--red);
+  }
+  .number .unit{
+    font-family:var(--serif); font-style:italic;
+    font-size:66px; line-height:1; margin-top:8px;
+  }
+  .number .label{
+    font-size:38px; line-height:1.4; max-width:24ch; margin-top:54px;
+  }
+
+  /* ---------- 4 · insight ---------- */
+  .insight .stage{ justify-content:center; }
+  .insight .quote{
+    font-family:var(--serif); font-size:82px; line-height:1.14;
+    letter-spacing:-.01em; max-width:19ch;
+  }
+  .insight .attr{
+    font-size:30px; font-weight:500; margin-top:48px;
+    padding-left:26px; border-left:6px solid var(--red);
+  }
+
+  /* ---------- 5 · thesis · the one loud slide ---------- */
+  .thesis{ background:var(--red); color:var(--paper); }
+  .thesis .foot{ border-top-color:var(--paper); }
+  .thesis .stage{ justify-content:center; }
+  .thesis .eyebrow{
+    font-family:var(--serif); font-style:italic; font-size:40px;
+    margin-bottom:36px; opacity:.85;
+  }
+  .thesis .statement{
+    font-family:var(--serif); font-size:94px; line-height:1.08;
+    letter-spacing:-.015em; max-width:17ch;
+  }
+
+  /* ---------- 6 · cta ---------- */
+  .cta .stage{ justify-content:flex-end; }
+  .cta .line{
+    font-family:var(--serif); font-size:78px; line-height:1.1;
+    letter-spacing:-.01em; max-width:18ch;
+  }
+  .cta .handle{
+    font-size:40px; font-weight:600; color:var(--red);
+    margin-top:44px; letter-spacing:.005em;
+  }
+</style>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script>
+/* n8n replaces the next line with the slide object before POSTing to the renderer */
+window.__SLIDE__ = /*__DATA__*/ null;
+
+(function(){
+  var d = window.__SLIDE__;
+  if (!d) {                                   /* local preview fallback */
+    var q = new URLSearchParams(location.search).get("d");
+    try { d = q ? JSON.parse(decodeURIComponent(q)) : {}; } catch (e) { d = {}; }
+  }
+  var esc = function(s){
+    return String(s == null ? "" : s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  };
+
+  var day    = esc(d.day || "");
+  var pos    = (d.index != null ? (d.index + 1) : 1) + "/6";
+  var source = esc(d.source_domain || "");
+  var handle = esc(d.handle || "@curiousventures");
+
+  var furniture =
+    '<div class="top"><div class="day">' + day + '</div>' +
+    '<div class="pos">' + pos + '</div></div>';
+
+  var foot =
+    '<div class="foot"><div class="mark">Curious Ventures</div>' +
+    '<div class="src">' + source + '</div></div>';
+
+  var stage = "", cls = esc(d.layout || "hook");
+
+  switch (d.layout) {
+    case "hook":
+      stage = '<div class="rule"></div>' +
+              '<div class="headline fit" data-min="72">' + esc(d.headline) + '</div>' +
+              (d.standfirst ? '<div class="standfirst">' + esc(d.standfirst) + '</div>' : '');
+      break;
+
+    case "context":
+      stage = (d.headline ? '<div class="headline">' + esc(d.headline) + '</div>' : '') +
+              (d.body || []).map(function(p){ return '<p>' + esc(p) + '</p>'; }).join("");
+      break;
+
+    case "number":
+      stage = '<div class="fig fit" data-min="150">' + esc(d.figure) + '</div>' +
+              (d.unit ? '<div class="unit">' + esc(d.unit) + '</div>' : '') +
+              '<div class="label">' + esc(d.label) + '</div>';
+      break;
+
+    case "insight":
+      stage = '<div class="quote fit" data-min="52">' +
+                (d.attribution ? '&ldquo;' + esc(d.quote) + '&rdquo;' : esc(d.quote)) +
+              '</div>' +
+              (d.attribution ? '<div class="attr">' + esc(d.attribution) + '</div>' : '');
+      break;
+
+    case "thesis":
+      stage = '<div class="eyebrow">Our read</div>' +
+              '<div class="statement fit" data-min="58">' + esc(d.statement) + '</div>';
+      break;
+
+    case "cta":
+      stage = '<div class="line">' + esc(d.line) + '</div>' +
+              '<div class="handle">' + handle + '</div>';
+      break;
+  }
+
+  document.getElementById("root").outerHTML =
+    '<div class="slide ' + cls + '">' + furniture +
+    '<div class="stage">' + stage + '</div>' + foot + '</div>';
+
+  /* shrink oversized display type until it fits its column, down to a floor */
+  function fit(){
+    document.querySelectorAll(".fit").forEach(function(el){
+      var min  = parseFloat(el.dataset.min) || 40;
+      var size = parseFloat(getComputedStyle(el).fontSize);
+      var box  = el.parentElement;
+      var guard = 0;
+      while (guard++ < 120 && size > min &&
+             (box.scrollHeight > box.clientHeight || el.scrollWidth > el.clientWidth)) {
+        size -= 3;
+        el.style.fontSize = size + "px";
+      }
+    });
+    document.body.dataset.ready = "1";
+  }
+
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }
+  else { window.addEventListener("load", fit); }
+})();
+</script>
+</body>
+</html>

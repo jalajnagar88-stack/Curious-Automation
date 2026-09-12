@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Curious Desk — slide template preview</title>
+<style>
+  body{ margin:0; padding:40px; background:#2A2A2A; font-family:system-ui, sans-serif; }
+  h1{ color:#EEE; font-size:15px; font-weight:500; margin:0 0 6px; letter-spacing:.02em; }
+  p.note{ color:#888; font-size:13px; margin:0 0 28px; max-width:60ch; line-height:1.5; }
+  .rail{ display:flex; gap:24px; overflow-x:auto; padding-bottom:24px; }
+  .cell{ flex:0 0 auto; }
+  .cap{ color:#777; font-size:12px; margin-top:10px; letter-spacing:.04em; }
+  iframe{
+    width:1080px; height:1350px; border:0; display:block;
+    transform:scale(.34); transform-origin:top left;
+  }
+  .frame{ width:367px; height:459px; overflow:hidden; background:#FCFBF7; }
+</style>
+</head>
+<body>
+
+<h1>Curious Desk — six slide layouts</h1>
+<p class="note">Sample data only. Edit <code>slide.html</code> and refresh. Serve this over
+a local server (<code>npx serve .</code>) if your browser blocks file:// iframes.</p>
+
+<div class="rail" id="rail"></div>
+
+<script>
+const SAMPLE = {
+  day: "tuesday",
+  source_domain: "entrackr.com",
+  handle: "@curiousventures",
+  slides: [
+    { layout:"hook",
+      headline:"SEBI opens a separate registration lane for angel funds",
+      standfirst:"The threshold that kept small syndicates out has moved." },
+
+    { layout:"context",
+      headline:"What changed",
+      body:[
+        "The regulator has revised the framework governing angel funds registered as Category I AIFs.",
+        "Existing funds get a transition window to meet the revised conditions.",
+        "The change follows a consultation paper circulated to industry earlier this year."
+      ] },
+
+    { layout:"number",
+      figure:"₹25 lakh",
+      unit:"minimum",
+      label:"The revised floor for an individual investor's commitment to an angel fund." },
+
+    { layout:"insight",
+      quote:"The constraint on Indian angel capital was never appetite. It was paperwork.",
+      attribution:"" },
+
+    { layout:"thesis",
+      statement:"Lower the cost of a small cheque and the pre-seed market gets deeper, not just louder." },
+
+    { layout:"cta",
+      line:"We read the filings so you can read one slide." }
+  ]
+};
+
+const rail = document.getElementById("rail");
+SAMPLE.slides.forEach((s, i) => {
+  const data = Object.assign({}, s, {
+    day: SAMPLE.day,
+    index: i,
+    source_domain: SAMPLE.source_domain,
+    handle: SAMPLE.handle
+  });
+  const cell = document.createElement("div");
+  cell.className = "cell";
+  cell.innerHTML =
+    '<div class="frame"><iframe src="slide.html?d=' +
+    encodeURIComponent(JSON.stringify(data)) + '"></iframe></div>' +
+    '<div class="cap">' + (i + 1) + " · " + s.layout + '</div>';
+  rail.appendChild(cell);
+});
+</script>
+
+</body>
+</html>
