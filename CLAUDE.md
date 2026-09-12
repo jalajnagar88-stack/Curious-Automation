@@ -36,6 +36,11 @@ card in Telegram. Publish nothing yet.**
 - **No Google News RSS.** Its items link to `news.google.com` redirects with an
   encoded target, so dedupe-on-URL never matches and the body fetch returns a
   consent page. Direct publisher feeds only. See the comment in `src/ingest.js`.
+- **SQLite, not Supabase.** One writer, under a hundred rows a day, and no browser
+  ever touches the data. A hosted Postgres bought a signup, a service-role key and a
+  second thing that can be down at 21:05. `node:sqlite` is built into Node, so the
+  dependency count went down. The tradeoff is that the data lives on the host's disk:
+  use an absolute `DB_PATH` and a mounted volume if the filesystem is ephemeral.
 - **Article bodies are fetched, not just RSS summaries.** Without the body, the
   fact gate has nothing to check against and is decorative.
 

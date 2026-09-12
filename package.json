@@ -4,18 +4,24 @@
   "private": true,
   "type": "module",
   "description": "Autonomous daily Instagram carousel for Curious Ventures",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "start": "node src/index.js",
-    "draft": "node src/index.js --once=draft",
-    "publish": "node src/index.js --once=publish",
-    "report": "node src/index.js --once=report",
+    "start": "node --disable-warning=ExperimentalWarning src/index.js",
+    "ingest": "node --disable-warning=ExperimentalWarning src/index.js --once=ingest",
+    "ingest:selftest": "node --disable-warning=ExperimentalWarning scripts/ingest-selftest.js",
+    "check:db": "node --disable-warning=ExperimentalWarning scripts/check-db.js",
+    "check:llm": "node --disable-warning=ExperimentalWarning scripts/check-llm.js",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/*.test.js\"",
+    "draft": "node --disable-warning=ExperimentalWarning src/index.js --once=draft",
+    "publish": "node --disable-warning=ExperimentalWarning src/index.js --once=publish",
+    "report": "node --disable-warning=ExperimentalWarning src/index.js --once=report",
     "preview": "npx serve template"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "@extractus/article-extractor": "^8.0.16",
-    "@supabase/supabase-js": "^2.45.4",
     "dotenv": "^16.4.5",
     "node-cron": "^3.0.3",
     "rss-parser": "^3.13.0"

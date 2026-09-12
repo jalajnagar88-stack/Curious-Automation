@@ -1,9 +1,14 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { readFile } from "node:fs/promises";
 import { cfg, log } from "./config.js";
+import { complete, describe } from "./llm.js";
 
-const client = new Anthropic({ apiKey: cfg.anthropicKey });
-
+/*
+ * Picks the story and writes the six slides.
+ *
+ * This file owns the prompt and the parsing; src/llm.js owns the HTTP call, so
+ * the provider is set by LLM_PROVIDER and nothing here changes when it does.
+ * Whatever comes back still goes through src/verify.js before it can publish.
+ */
 
 let SYSTEM = null;
 async function system() {
@@ -41,16 +46,12 @@ export async function selectAndWrite(candidates, when = new Date()) {
 
   const dateISO = new Intl.DateTimeFormat("en-CA", { timeZone: cfg.tz }).format(when);
 
-  const res = await client.messages.create({
-    model: cfg.model,
-    max_tokens: 4000,
-    temperature: 0.4,
+  const text = await complete({
     system: await system(),
-    messages: [{ role: "user", content: buildUser(candidates, dayName, dateISO) }],
+    user: buildUser(candidates, dayName, dateISO),
   });
 
-  const text = res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
   const out = parseJson(text);
-  log(`claude: chose ${out.chosen_url || "(blocked)"} confidence ${out.confidence}`);
+  log(`${describe()}: chose ${out.chosen_url || "(blocked)"} confidence ${out.confidence}`);
   return { ...out, day_of_week: dayName, date: dateISO };
 }
