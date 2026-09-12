@@ -1,9 +1,9 @@
 /*
  * Unit tests for the fact gate.
  *
- * These test src/verify.js; they do not modify it. The requirement is
- * fail-closed: where the verifier cannot decide, it must hold the post. A test
- * that fails here is a finding about the verifier, not a licence to loosen it.
+ * These test src/verify.js. The requirement is fail-closed: where the verifier
+ * cannot decide, it must hold the post. A test that fails here is a finding
+ * about the verifier, not a licence to loosen it.
  *
  *   npm test
  */
@@ -117,29 +117,67 @@ test("a span too short to be evidence fails", () => {
 
 /* ----------------------------------------------------------- the number sweep */
 
-test("a figure on a slide with no facts_used entry is caught by the sweep", () => {
+test("an invented figure on a slide is caught by the sweep", () => {
   const r = verify(draftWith((d) => {
     d.slides[4].statement = "Logistics rails now carry a $99 billion opportunity.";
   }), SOURCE);
   assert.equal(r.pass, false);
-  assert.match(why(r), /neither declared nor in the source/);
-  assert.ok(r.undeclared.some((u) => u.includes("99")), `undeclared was ${JSON.stringify(r.undeclared)}`);
+  assert.match(why(r), /appear nowhere in the source/);
+  assert.ok(r.fabricated.some((u) => u.includes("99")), `fabricated was ${JSON.stringify(r.fabricated)}`);
 });
 
-test("the sweep reads the caption-free slide fields, including body arrays", () => {
+test("the sweep reads every slide field, including body arrays", () => {
   const r = verify(draftWith((d) => {
     d.slides[1].body.push("A further Rs 7,400 crore is expected to follow.");
   }), SOURCE);
   assert.equal(r.pass, false);
-  assert.match(why(r), /neither declared nor in the source/);
+  assert.match(why(r), /appear nowhere in the source/);
 });
 
-test("a figure present in the source but undeclared is allowed through the sweep", () => {
-  // Rs 595 crore is in the article; the sweep is a backstop, not a declaration audit.
+test("a real figure that was never declared holds the post", () => {
+  // Rs 595 crore is the net loss in the article. Being present somewhere in the
+  // source is not evidence that the claim it is attached to is the right one.
+  const r = verify(draftWith((d) => {
+    d.slides[1].body.push("Revenue of Rs 595 crore.");
+  }), SOURCE);
+  assert.equal(r.pass, false, "a figure with no facts_used entry must not publish");
+  assert.match(why(r), /never declared in facts_used/);
+  assert.ok(r.undeclared.some((u) => u.includes("595")), `undeclared was ${JSON.stringify(r.undeclared)}`);
+});
+
+test("the same figure passes once it is declared against a span that supports it", () => {
   const r = verify(draftWith((d) => {
     d.slides[1].body.push("Net loss narrowed to Rs 595 crore.");
+    d.facts_used.push({ value: "Rs 595 crore", slide_index: 1, in_source: true,
+      verbatim_span: "narrowing its net loss to Rs 595 crore" });
   }), SOURCE);
   assert.equal(r.pass, true, `expected pass, got: ${why(r)}`);
+});
+
+/* ------------------------------------------------------------- the caption */
+
+test("an invented figure in the caption is caught", () => {
+  const r = verify(draftWith((d) => {
+    d.caption = "Shiprocket is now chasing a $99 billion logistics market.\n\nSource: Entrackr, 12 September 2026";
+  }), SOURCE);
+  assert.equal(r.pass, false);
+  assert.match(why(r), /appear nowhere in the source/);
+});
+
+test("the Source attribution line is not swept", () => {
+  // Our own boilerplate. Its date is not a claim about the company.
+  const r = verify(draftWith((d) => {
+    d.caption = "A logistics bet from an unexpected direction.\n\nSource: Entrackr, 12 September 2026";
+  }), SOURCE);
+  assert.equal(r.pass, true, `expected pass, got: ${why(r)}`);
+});
+
+/* ------------------------------------------------------- a malformed draft */
+
+test("a draft that is not exactly six slides holds", () => {
+  const r = verify(draftWith((d) => { d.slides = d.slides.slice(0, 4); }), SOURCE);
+  assert.equal(r.pass, false);
+  assert.match(why(r), /expected 6 slides, got 4/);
 });
 
 /* -------------------------------------------------------------- normalisation */
@@ -185,15 +223,14 @@ test("a truncated raw_text fails closed", () => {
   assert.match(why(r), /missing or too short/);
 });
 
-/* -------------------------------------------------------------- findings
+/* ------------------------------------------------------------- regressions
  *
- * The two tests below fail against src/verify.js as written. They are left
- * failing on purpose: the verifier is the legal safeguard and is not mine to
- * change unilaterally. Each documents a decision for the user, not a bug to
- * paper over. Delete neither without deciding.
+ * Two holes this suite found in the first version of the gate. Both are closed.
+ * Neither test may be deleted or loosened — the second guarded a case where the
+ * gate failed OPEN, which is the one direction this file exists to prevent.
  */
 
-test("FINDING 1 · \u20b935 crore on the slide matches Rs 35 crore in the source", () => {
+test("\u20b935 crore on the slide matches Rs 35 crore in the source", () => {
   // normalise() rewrites "Rs " to "\u20b9 " and keeps the space, so a slide written
   // "\u20b935 crore" never matches a source written "Rs 35 crore". Fails closed — it
   // holds a true post — but Indian publishers write "Rs" and slides write "\u20b9",
@@ -207,7 +244,7 @@ test("FINDING 1 · \u20b935 crore on the slide matches Rs 35 crore in the source
   assert.equal(r.pass, true, `expected pass, got: ${why(r)}`);
 });
 
-test("FINDING 2 · a real number attached to the wrong claim is not caught", () => {
+test("a real number attached to the wrong claim is caught", () => {
   // The source says net loss narrowed to Rs 595 crore. The slide calls it revenue.
   // With no facts_used entry the declaration loop never runs, and the sweep clears
   // the figure because the token does appear in the article. Fails open.
