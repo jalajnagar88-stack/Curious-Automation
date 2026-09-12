@@ -27,16 +27,17 @@ if (once) {
    *
    *   node src/index.js --once=ingest                  write to Supabase
    *   node src/index.js --once=ingest --dry            touch no database at all
+   *   node src/index.js --once=ingest --retry-bodies   second pass at empty bodies
    *   node src/index.js --once=ingest --hours=72 --limit=10
    */
   const ingestJob = async () => {
-    const { ingest, printReport } = await import("./ingest.js");
+    const { ingest, retryBodies, printReport } = await import("./ingest.js");
     const hours = Number(arg("hours", 48));
     const limitArg = arg("limit");
-    printReport(await ingest(hours, {
-      dry: flag("dry"),
-      limit: limitArg ? Number(limitArg) : Infinity,
-    }));
+    const limit = limitArg ? Number(limitArg) : Infinity;
+    printReport(flag("retry-bodies")
+      ? await retryBodies(hours, { limit })
+      : await ingest(hours, { dry: flag("dry"), limit }));
   };
 
   const jobs = { ingest: ingestJob, draft: draftJob, publish: publishJob, report: reportJob };

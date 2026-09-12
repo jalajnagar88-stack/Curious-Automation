@@ -1,6 +1,6 @@
 import Parser from "rss-parser";
 import { extractFromHtml, extract } from "@extractus/article-extractor";
-import { insertCandidates, update } from "./db.js";
+import { insertCandidates, update, bodylessRows } from "./db.js";
 import { log } from "./config.js";
 
 /*
@@ -199,14 +199,55 @@ export async function ingest(hours = 48, { dry = false, feeds = FEEDS, limit = I
   return report;
 }
 
+/**
+ * Re-attempt the body fetch for rows stored earlier that still have no raw_text.
+ *
+ * Worth running before you conclude a publisher cannot be extracted at all: a
+ * single failed fetch tells you very little, the same failure twice tells you
+ * whether to reach for a User-Agent or for a site-specific selector.
+ */
+export async function retryBodies(hours = 48, { limit = Infinity } = {}) {
+  const rows = await bodylessRows(hours);
+  const targets = limit === Infinity ? rows : rows.slice(0, limit);
+  const report = { hours, dry: false, retry: true, feeds: [], bodies: [] };
+  log(`retry: ${rows.length} stored rows in the last ${hours}h have no raw_text`);
+
+  let filled = 0;
+  for (const row of targets) {
+    const r = await body(row.source_url);
+    if (r.text) { await update(row.id, { raw_text: r.text }); filled++; }
+    else log("body retry failed", row.source_url, r.reason);
+    report.bodies.push({
+      feed: row.source_domain || domainOf(row.source_url),
+      domain: row.source_domain || domainOf(row.source_url),
+      url: row.source_url,
+      title: row.source_title,
+      chars: r.text ? r.text.length : 0,
+      htmlLength: r.htmlLength,
+      reason: r.reason,
+    });
+    await new Promise((r) => setTimeout(r, 700));
+  }
+  log(`retry: ${filled} bodies recovered`);
+  report.itemsSeen = rows.length;
+  report.newRows = 0;
+  report.bodiesAttempted = targets.length;
+  report.withBody = filled;
+  return report;
+}
+
 /** The table asked for at the end of step 3: rows per publisher, bodies per publisher. */
 export function printReport(r) {
   const pad = (s, n) => String(s).padEnd(n);
-  console.log(`\n=== feeds (last ${r.hours}h)${r.dry ? " · DRY RUN, nothing written" : ""} ===`);
-  console.log(pad("publisher", 14), pad("items", 7), pad("in window", 11), pad("kept", 6), "status");
-  for (const f of r.feeds)
-    console.log(pad(f.name, 14), pad(f.total, 7), pad(f.inWindow, 11), pad(f.kept, 6),
-      f.error ? `FAILED — ${f.error}` : "ok");
+  if (r.feeds.length) {
+    console.log(`\n=== feeds (last ${r.hours}h)${r.dry ? " · DRY RUN, nothing written" : ""} ===`);
+    console.log(pad("publisher", 14), pad("items", 7), pad("in window", 11), pad("kept", 6), "status");
+    for (const f of r.feeds)
+      console.log(pad(f.name, 14), pad(f.total, 7), pad(f.inWindow, 11), pad(f.kept, 6),
+        f.error ? `FAILED — ${f.error}` : "ok");
+  } else if (r.retry) {
+    console.log(`\n=== retry (stored rows with no raw_text, last ${r.hours}h) ===`);
+  }
 
   const groups = new Map();
   for (const b of r.bodies) {
@@ -220,7 +261,10 @@ export function printReport(r) {
   for (const [name, g] of groups)
     console.log(pad(name, 14), pad(g.ok, 10), pad(g.fail, 6), g.reasons[0] || "");
 
-  console.log(`\nitems in window ${r.itemsSeen} · new rows ${r.newRows} · non-null raw_text ${r.withBody}`);
+  console.log(r.retry
+    ? `\nrows retried ${r.bodiesAttempted} of ${r.itemsSeen} · recovered ${r.withBody}`
+    : `\nitems in window ${r.itemsSeen} · new rows ${r.newRows} · non-null raw_text ${r.withBody}`);
+  if (r.retry) return;
   if (r.withBody < 5)
     console.log(`\nStep 3 gate NOT met: NEXT.md requires at least 5 rows with a non-null raw_text.`);
   else

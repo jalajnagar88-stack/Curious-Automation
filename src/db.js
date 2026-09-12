@@ -30,6 +30,28 @@ export async function insertCandidates(rows) {
   return data || [];
 }
 
+/*
+ * Rows stored earlier whose body never extracted.
+ *
+ * Dedupe is on source_url, so a story whose first body fetch failed — a rate
+ * limit, a timeout, a publisher having a bad minute — never reappears in the
+ * insert result and would otherwise never get a second attempt. These rows are
+ * invisible to freshCandidates (it filters raw_text is null), so they are lost
+ * stories, not stored ones.
+ */
+export async function bodylessRows(hours = 48) {
+  const since = new Date(Date.now() - hours * 3600e3).toISOString();
+  const { data, error } = await db
+    .from("posts")
+    .select("id, source_url, source_title, source_domain")
+    .eq("status", "new")
+    .is("raw_text", null)
+    .gte("source_date", since)
+    .order("source_date", { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
 export async function freshCandidates(hours = 48) {
   const since = new Date(Date.now() - hours * 3600e3).toISOString();
   const { data, error } = await db
