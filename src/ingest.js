@@ -117,7 +117,7 @@ export async function body(url) {
 /**
  * Pull every feed, keep the last `hours`, fetch article bodies, store new rows.
  *
- * `dry` runs the whole thing without Supabase: feeds are parsed, deduped in
+ * `dry` runs the whole thing without the database: feeds are parsed, deduped in
  * memory and bodies fetched, but nothing is written. Use it to prove the feeds
  * and the extractor before credentials exist.
  */

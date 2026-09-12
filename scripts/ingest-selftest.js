@@ -4,15 +4,27 @@
  * Serves fixture RSS and article HTML on 127.0.0.1 and runs the real ingest()
  * against it, so the feed window, URL canonicalisation, cross-feed dedupe and
  * both body-failure modes can be checked without the open internet, without a
- * publisher's rate limit, and without Supabase.
+ * publisher's rate limit.
  *
  * This proves the logic, not the feeds. Only a real `npm run ingest -- --dry`
  * tells you whether a publisher's feed URL has moved.
  *
+ * It runs twice: once dry, then once for real against a scratch database file,
+ * so the stored-row path — insert, dedupe, raw_text fill — is exercised too.
+ *
  *   node scripts/ingest-selftest.js
  */
 import http from "node:http";
-import { ingest, printReport } from "../src/ingest.js";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+// Point the data layer at a scratch file before anything imports config.
+const scratch = mkdtempSync(join(tmpdir(), "curious-selftest-"));
+process.env.DB_PATH = join(scratch, "selftest.db");
+
+const { ingest, retryBodies, printReport } = await import("../src/ingest.js");
+const { handle, freshCandidates, bodylessRows, close } = await import("../src/db.js");
 
 const now = Date.now();
 const iso = (hoursAgo) => new Date(now - hoursAgo * 3600e3).toUTCString();
@@ -76,14 +88,14 @@ ${items.map(([path, h]) => `<item><title>${(stories[path] || path).replace(/&/g,
 
 await new Promise((r) => srv.listen(8731, "127.0.0.1", r));
 
-const report = await ingest(48, {
-  dry: true,
-  feeds: [
-    { name: "TestWire",  url: "http://127.0.0.1:8731/feed-a" },
-    { name: "TestDaily", url: "http://127.0.0.1:8731/feed-b" },
-    { name: "DeadFeed",  url: "http://127.0.0.1:8731/feed-dead" },
-  ],
-});
+const FEEDS = [
+  { name: "TestWire",  url: "http://127.0.0.1:8731/feed-a" },
+  { name: "TestDaily", url: "http://127.0.0.1:8731/feed-b" },
+  { name: "DeadFeed",  url: "http://127.0.0.1:8731/feed-dead" },
+];
+
+
+const report = await ingest(48, { dry: true, feeds: FEEDS });
 printReport(report);
 
 const urls = report.bodies.map((b) => b.url);
@@ -103,6 +115,35 @@ check("200 with no article node reported with html length",
   /no article node in \d+ bytes/.test(report.bodies.find((b) => b.url.includes("no-article"))?.reason || ""));
 check("at least 5 bodies extracted", report.withBody >= 5);
 
+/* ------------------------------------------------ the same run, but stored */
+
+console.log("\n\n################ second pass: writing to the database ################");
+const stored = await ingest(48, { feeds: FEEDS });
+printReport(stored);
+
+const count = (sql) => handle().prepare(sql).get().n;
+const total = count("select count(*) n from posts");
+const withText = count("select count(*) n from posts where raw_text is not null");
+
+console.log("\n--- stored-row assertions ---");
+check("rows were actually written", total === 8);
+check("non-null raw_text matches the report", withText === stored.withBody);
+check("freshCandidates returns only rows with a body", freshCandidates(48).length === withText);
+check("rows whose body failed are queued for retry", bodylessRows(48).length === total - withText);
+
+console.log("\n################ third pass: the same feeds again ################");
+const second = await ingest(48, { feeds: FEEDS });
+check("a second run inserts nothing new", second.newRows === 0);
+check("the second run refetches no bodies", second.bodies.length === 0);
+check("the database did not grow", count("select count(*) n from posts") === total);
+
+console.log("\n################ retry pass over the bodyless rows ################");
+const retried = await retryBodies(48);
+check("retry attempts exactly the bodyless rows", retried.bodiesAttempted === total - withText);
+check("a permanently blocked page stays blocked", retried.withBody === 0);
+
 srv.close();
+close();
+rmSync(scratch, { recursive: true, force: true });
 if (failed) { console.error(`\n${failed} assertion(s) failed.`); process.exit(1); }
 console.log("\ningest self-test passed.");

@@ -104,11 +104,7 @@ export async function publishJob() {
 
 /* --------------------------------------------- 08:05 IST, yesterday's numbers */
 export async function reportJob() {
-  const since = new Date(Date.now() - 36 * 3600e3).toISOString();
-  const { data } = await db.db.from("posts")
-    .select("id, ig_post_id, ig_permalink, source_title")
-    .eq("status", "posted").gte("posted_at", since);
-
+  const data = await db.postedSince(36);
   if (!data?.length) return;
   for (const p of data) {
     if (!p.ig_post_id) continue;

@@ -25,7 +25,7 @@ if (once) {
    * Ingest is runnable on its own so the feeds and the article extractor can be
    * debugged without the model, the renderer, Telegram or Instagram in the way.
    *
-   *   node src/index.js --once=ingest                  write to Supabase
+   *   node src/index.js --once=ingest                  store rows
    *   node src/index.js --once=ingest --dry            touch no database at all
    *   node src/index.js --once=ingest --retry-bodies   second pass at empty bodies
    *   node src/index.js --once=ingest --hours=72 --limit=10

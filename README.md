@@ -18,7 +18,8 @@ prompt/select_and_write.md     the system prompt (edited as prose, loaded at run
 prompt/slides.schema.json      the contract the model output must satisfy
 template/slide.html            one file, six layouts, brand tokens at the top
 template/preview.html          open this to iterate on the design, no pipeline needed
-sql/001_init.sql               the single Supabase table
+sql/001_init.sqlite.sql        the single table, created on first run
+src/db.js                      the SQLite data layer
 src/ingest.js                  feeds, dedupe, article body extraction
 src/claude.js                  the one model call
 src/verify.js                  the fact gate — read this one carefully
@@ -31,8 +32,14 @@ src/index.js                   cron + entrypoint
 
 ## Setup
 
-**1. Supabase.** Create a project. Run `sql/001_init.sql` in the SQL editor. Copy the
-project URL and the *service role* key into `.env`.
+**1. Database.** Nothing to do. One SQLite file at `DB_PATH` (default
+`./data/curious.db`), created with its schema on first run. There is no signup, no
+credential and no network hop. `npm run check:db` proves it in about a second.
+
+Set `DB_PATH` to an absolute path under pm2 or in a container, or the file follows
+the working directory. On a host with an ephemeral filesystem, mount a volume at
+that path — the row *is* the post, and losing it loses the approval state and the
+dedupe history.
 
 **2. Instagram.** The account must be a **Business** account, not Creator — Creator
 accounts cannot be linked to a Page cleanly and content publishing will fail. Link it
@@ -57,8 +64,13 @@ at roughly 186 renders a month.
 ```bash
 cp .env.example .env      # fill it in
 npm install
+npm run check:db          # database, no credentials needed
+npm run ingest -- --dry   # every feed, writes nothing
 npm run draft             # does everything up to the Telegram card, publishes nothing
 ```
+
+`npm test` runs the fact-gate tests. `npm run ingest:selftest` runs the whole ingest
+path offline against fixture feeds.
 
 `npm start` runs the scheduler. `npm run publish` and `npm run report` fire those jobs
 by hand.
@@ -94,4 +106,6 @@ drafts still wait for a human — `MIN_CONFIDENCE` overrides auto-approve.
 - Long-lived Page tokens expire in about 60 days. Refresh them or the 08:00 job starts
   failing silently into Telegram. Put a reminder in the calendar now.
 - Google News RSS is deliberately not in the feed list. See the comment in `src/ingest.js`.
+- `node:sqlite` is built into Node but still marked experimental, so pin the Node
+  major version on the host rather than tracking latest.
 - Sunday is not handled here. The prompt returns `blocked: true` for it by design.

@@ -5,7 +5,7 @@ import "dotenv/config";
  *
  * Every module in the pipeline imports this file, so an eager check meant that
  * running one step in isolation (`--once=ingest`, which touches only the feeds
- * and Supabase) demanded a Telegram token and a Graph API token it never used.
+ * and the database) demanded a Telegram token and a Graph API token it never used.
  * A getter throws at the moment a step actually reaches for a key it is missing,
  * and names the step in the error.
  */
@@ -19,8 +19,9 @@ export const cfg = {
   get anthropicKey() { return req("ANTHROPIC_API_KEY"); },
   model: process.env.CLAUDE_MODEL || "claude-sonnet-4-6",
 
-  get supabaseUrl() { return req("SUPABASE_URL"); },
-  get supabaseKey() { return req("SUPABASE_SERVICE_KEY"); },
+  // One SQLite file. Relative paths resolve against the working directory, so
+  // set an absolute path in .env when running under pm2 or a container.
+  dbPath: process.env.DB_PATH || "./data/curious.db",
 
   renderer: process.env.RENDERER || "hcti",
   hctiUser: process.env.HCTI_USER_ID,
